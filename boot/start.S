@@ -19,3 +19,10 @@ _start:
 4:	bl	kernel_main
 	b	1b
 
+
+	.globl get_el
+
+get_el:
+	mrs x0, CurrentEL
+	lsr x0, x0, #2
+	ret

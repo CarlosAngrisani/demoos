@@ -5,9 +5,14 @@
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
-  uart_init();
-  uart_puts("Hello, kernel world!\r\n");
-  
-  while (1)
-    uart_putc(uart_getc());
+	uart_init();
+	uart_puts("Hello, kernel world!\r\n");
+
+	uart_puts("Exception level: ");
+	uart_putc('0' + get_el());
+	uart_puts("\n");
+
+	while (1)
+		uart_putc(uart_getc());
+
 }
