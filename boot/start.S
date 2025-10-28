@@ -17,8 +17,6 @@ _start:
     // passiamo da EL2 --> EL1
 	mov x0, #HCR_VALUE
 	msr HCR_EL2, x0
-	mov x0, #HCR_VALUE
-	msr HCR_EL2, x0
 	mov x0, #SPSR_VALUE
 	msr SPSR_EL2, x0
 	adr x0, already_el1
