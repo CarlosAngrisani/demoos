@@ -8,25 +8,24 @@
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
-	uart_init();
+    // Inizializza UART
+    uart_init();
+    uart_puts("Hello, kernel world!\r\n");
 
-	uart_puts("Hello, kernel world!\r\n");
+	// Stampa EL
+    uart_puts("Exception level: ");
+    uart_putc('0' + get_el());
+    uart_puts("\n");
 
-	uart_puts("Exception level: ");
-	uart_putc('0' + get_el());
-	uart_puts("\n");
+    // Inizializza vettore IRQ e timer
+    irq_vector_init();
+    timer_init();
+    enable_interrupt_controller();
+    enable_irq();
 
-	irq_vector_init();
-	timer_init();
-	enable_interrupt_controller();
-	enable_irq();
-
-	// Blocco codice per generare forzatamente eccezione tipo SYNC
-	// uart_puts("Triggering SYNC exception...\r\n");
-    // asm volatile("svc #0");
-
-	while (1)
-		uart_putc(uart_getc());
-
+    // Ora gli interrupt gestiscono RX/TX della UART e il timer.
+    // Non serve più loop su uart_getc().
+    while (1) {
+    }
 }
 

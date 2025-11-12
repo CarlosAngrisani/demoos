@@ -89,3 +89,60 @@ void uart_hex(unsigned long num)
     }
 }
 
+// Helpers per FIFO
+static inline int uart_rx_fifo_not_empty(void) {
+    return !(mmio_read(UART0_FR) & (1 << 4));
+}
+
+static inline int uart_tx_fifo_not_full(void) {
+    return !(mmio_read(UART0_FR) & (1 << 5));
+}
+
+// Gestore interrupt UART
+void handle_uart_irq(void)
+{
+	uart_puts("UART interrupt received");
+    unsigned int mis = mmio_read(UART0_MIS);
+
+    // RX interrupt
+    if (mis & (1 << 4)) {
+	uart_puts(": type RX\r\n");
+        while (uart_rx_fifo_not_empty()) {
+            unsigned int dr = mmio_read(UART0_DR);
+            unsigned int err = (dr >> 8) & 0xF;
+
+            if (err) {
+                uart_puts("UART RX error ");
+                uart_hex(err);
+                uart_puts("\r\n");
+            } else {
+                char c = (char)(dr & 0xFF);
+                uart_putc(c);
+				uart_puts("\n");
+            }
+        }
+        mmio_write(UART0_ICR, (1 << 4));
+    }
+
+    // TX interrupt
+    if (mis & (1 << 5)) {
+	uart_puts(": type TX\r\n");
+        // Se non hai buffer TX, disabilita TXIM
+        unsigned int imsc = mmio_read(UART0_IMSC);
+        mmio_write(UART0_IMSC, imsc & ~(1 << 5));
+        mmio_write(UART0_ICR, (1 << 5));
+    }
+
+    // Receive timeout
+    if (mis & (1 << 6)) {
+	uart_puts(": timeout\r\n");
+        while (uart_rx_fifo_not_empty()) {
+            unsigned int dr = mmio_read(UART0_DR);
+            char c = (char)(dr & 0xFF);
+            uart_putc(c);
+			uart_puts("\n");
+        }
+        mmio_write(UART0_ICR, (1 << 6));
+    }
+}
+
