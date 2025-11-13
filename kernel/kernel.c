@@ -1,10 +1,10 @@
 #include <stddef.h>
 #include <stdint.h>
-#include "../drivers/utils.h"
-#include "../drivers/uart.h"
-#include "../drivers/framebuffer.h"
-#include "../drivers/timer.h"
-#include "../drivers/irq.h"
+#include "../libs/utils.h"
+#include "../drivers/uart/uart.h"
+#include "../drivers/framebuffer/framebuffer.h"
+#include "../drivers/timer/timer.h"
+#include "../drivers/irq/controller.h"
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {

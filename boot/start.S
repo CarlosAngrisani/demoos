@@ -2,7 +2,7 @@
 
     .globl _start
 
-#include "../drivers/sysregs.h"
+#include "../arch/sysregs.h"
 
 _start:
     // Controlla il livello di eccezione (EL)

@@ -1,9 +1,7 @@
 #include <stddef.h>
-
 #include "framebuffer.h"
-#include "mbox.h"
-
-#include "uart.h"
+#include "../mbox/mbox.h"
+#include "../uart/uart.h"
 
 #define WIDTH   1024
 #define HEIGHT  768

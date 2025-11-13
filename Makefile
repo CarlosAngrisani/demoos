@@ -8,8 +8,8 @@ CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles
 LDFLAGS := -nostdlib
 
 # Sources
-C_SRCS := $(wildcard drivers/*.c kernel/*.c)
-S_SRCS := $(wildcard drivers/*.S boot/*.S)
+C_SRCS := $(wildcard drivers/*/*.c kernel/*.c)
+S_SRCS := $(wildcard drivers/*/*.S boot/*.S libs/*.S)
 PSF_SRCS := $(wildcard font/*.psf)
 
 # Objects

@@ -1,7 +1,8 @@
-#include "utils.h"
-#include "uart.h"
-#include "timer.h"
-#include "irq.h"
+#include "../../libs/utils.h"
+#include "../uart/uart.h"
+#include "../timer/timer.h"
+#include "controller.h"
+#include "../../libs/mmio.h"
 
 const char *entry_error_messages[] = {
     "SYNC_INVALID_EL1t",
@@ -28,12 +29,12 @@ const char *entry_error_messages[] = {
 void enable_interrupt_controller(void)
 {
     // Abilita il timer1 in ENABLE_IRQS_1
-    unsigned int v1 = get32(ENABLE_IRQS_1);
-    put32(ENABLE_IRQS_1, v1 | SYSTEM_TIMER_IRQ_1);
+    unsigned int v1 = mmio_read(ENABLE_IRQS_1);
+    mmio_write(ENABLE_IRQS_1, v1 | SYSTEM_TIMER_IRQ_1);
 
     // Abilita UART0 (IRQ #57 -> ENABLE_IRQS_2 bit 25)
-    unsigned int v2 = get32(ENABLE_IRQS_2);
-    put32(ENABLE_IRQS_2, v2 | UART0_IRQ_BIT);
+    unsigned int v2 = mmio_read(ENABLE_IRQS_2);
+    mmio_write(ENABLE_IRQS_2, v2 | UART0_IRQ_BIT);
 }
 
 void show_invalid_entry_message(int type, unsigned long esr, unsigned long address)
@@ -48,8 +49,8 @@ void show_invalid_entry_message(int type, unsigned long esr, unsigned long addre
 
 void handle_irq(void)
 {
-    unsigned int p1 = get32(IRQ_PENDING_1);
-    unsigned int p2 = get32(IRQ_PENDING_2);
+    unsigned int p1 = mmio_read(IRQ_PENDING_1);
+    unsigned int p2 = mmio_read(IRQ_PENDING_2);
 
     if (p1 & SYSTEM_TIMER_IRQ_1) {
         handle_timer_irq();
