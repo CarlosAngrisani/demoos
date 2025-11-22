@@ -8,7 +8,7 @@ CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles
 LDFLAGS := -nostdlib
 
 # Sources
-C_SRCS := $(wildcard drivers/*/*.c kernel/*.c)
+C_SRCS := $(wildcard drivers/*/*.c kernel/*.c utils/*.c)
 S_SRCS := $(wildcard drivers/*/*.S boot/*.S libs/*.S)
 PSF_SRCS := $(wildcard font/*.psf)
 
@@ -43,4 +43,3 @@ run:
 
 clean:
 	rm -f kernel8.elf kernel8.img $(OBJS)
-

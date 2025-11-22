@@ -2,24 +2,50 @@
 #include "../../libs/utils.h"
 #include "../uart/uart.h"
 
-#include <stdio.h>
-
 void enable_card_detect();
 void enable_clock_and_command();
 void enable_data_pins();
 void reset_emmc();
+int sd_set_clock(unsigned int);
+int sd_cmd(unsigned int, unsigned int);
+int sd_status(unsigned int);
+int sd_wait_for_interrupt(unsigned int);
 
-int sd_init(void) {
+long sd_standard_version;
+
+unsigned long sd_scr[2], sd_rca, sd_error;
+
+int sd_init() {
     enable_card_detect();
     enable_clock_and_command();
     enable_data_pins();
 
     uart_puts("[DEBUG] SD pins set up OK\n");
 
-    long sd_standard_version = (*EMMC_SLOTISR_VER & HOST_SPEC_NUM) >> HOST_SPEC_NUM_SHIFT;
+    sd_standard_version = (*EMMC_SLOTISR_VER & HOST_SPEC_NUM) >> HOST_SPEC_NUM_SHIFT;
 
     reset_emmc();
-    uart_puts("[DEBUG] EMMC reset OK");
+
+    *EMMC_CONTROL1 |= C1_CLK_INTLEN | C1_TOUNIT_MAX;
+    wait_msec(10);
+
+    uart_puts("[DEBUG] EMMC reset OK\n");
+
+    if (sd_set_clock(400000) == SD_ERROR) {
+        return SD_ERROR;
+    }
+
+    uart_puts("[DEBUG] SD clock set OK\n");
+
+    // I enable the EMMC interrupts
+    *EMMC_INT_EN = 0xFFFFFFFF;
+    *EMMC_INT_MASK = 0xFFFFFFFF;
+
+    sd_scr[0] = sd_scr[1] = sd_rca = sd_error = 0;
+    sd_cmd(CMD_GO_IDLE, 0);
+    if (sd_error) {
+        return sd_error;
+    }
 
     return SD_OK;
 }
@@ -52,10 +78,10 @@ void enable_card_detect() {
 }
 
 void enable_clock_and_command() {
-    // The GPIO48 is the PIN which controls the clock of the SD controller, 
+    // The GPIO48 is the PIN which controls the clock of the SD controller,
     // while the GPIO49 controls the command line to send commands to the SD
     // These PINs are in the 4th group with an offset of 8 and 9
-    
+
     // As before, I have to set the function registers. In this case the function
     // bits are 111
     long r = *GPFSEL4;
@@ -97,7 +123,7 @@ void reset_emmc() {
 
     // The raspberry hardware should put the EMMC_CONTROL1 to 0 after a while;
     // so I wait this to happen
-    // IMPORTANT: qemu is not implementing the EMMC controller, so the CONTROL1 
+    // IMPORTANT: qemu is not implementing the EMMC controller, so the CONTROL1
     // bit will never be written
     // To confirm this thesis, execute the following code:
     /*
@@ -114,4 +140,173 @@ void reset_emmc() {
     while (*EMMC_CONTROL1 & C1_SRST_HC) {
         uart_puts("[DEBUG] I'm waiting the controller to reset the CONTROL1\n");
     }
+}
+
+int sd_set_clock(unsigned int frequency) {
+    int counter = 100000;
+
+    // Busy wait until EMMC inhibit flags are removed
+    while (*EMMC_STATUS & (SR_CMD_INHIBIT | SR_DAT_INHIBIT)) {
+        counter--;
+        wait_msec(1);
+
+        if (counter <= 0) {
+            uart_puts("[ERROR] Timeout expired for inhibiting flag in EMMC status\n");
+            return SD_ERROR;
+        }
+    }
+
+    *EMMC_CONTROL1 &= ~C1_CLK_EN;
+    wait_msec(10);
+
+    unsigned int clock = 41666666 / frequency;
+    unsigned int x, s = 32;
+
+    x = clock - 1;
+    if (!x) {
+        s = 0;
+    } else {
+        if (!(x & 0xffff0000u)) { x <<= 16; s -= 16; }
+        if (!(x & 0xff000000u)) { x <<= 8;  s -= 8; }
+        if (!(x & 0xf0000000u)) { x <<= 4;  s -= 4; }
+        if (!(x & 0xc0000000u)) { x <<= 2;  s -= 2; }
+        if (!(x & 0x80000000u)) { x <<= 1;  s -= 1; }
+        if (s > 0) { s--; }
+        if (s > 7) { s = 7; }
+    }
+
+    unsigned int d;
+    if (sd_standard_version > HOST_SPEC_V2) {
+        d = clock;
+    } else {
+        d = (1 << s);
+    }
+
+    if (d <= 2) {
+        d = 2;
+        s = 0;
+    }
+
+    unsigned int h = 0;
+    if (sd_standard_version > HOST_SPEC_V2) {
+        h = (d & 0x300) >> 2;
+    }
+    d = (((d & 0x0FF) << 8) | h);
+
+    *EMMC_CONTROL1 = (*EMMC_CONTROL1 & 0xffff003f) | d;
+    wait_msec(10);
+
+    counter = 10000;
+    while (!(*EMMC_CONTROL1 & C1_CLK_STABLE)) {
+        wait_msec(10);
+        counter--;
+
+        if (counter <= 0) {
+            uart_puts("[ERROR] Timeout expired getting stable clock");
+            return SD_ERROR;
+        }
+    }
+
+    return SD_OK;
+}
+
+int sd_cmd(unsigned int code, unsigned int arg) {
+    int response = 0;
+    sd_error = SD_OK;
+
+    // If the code is application specific, first I need to send an APP command
+    if (code & CMD_NEED_APP) {
+        response = sd_cmd(CMD_APP_CMD | sd_rca ? CMD_RSPNS_48 : 0, sd_rca);
+        if (sd_rca && !response) {
+            uart_puts("[ERROR] Failed to send SD APP command\n");
+            sd_error = SD_ERROR;
+            return SD_ERROR;
+        }
+        code &= ~CMD_NEED_APP;
+    }
+
+    if (sd_status(SR_CMD_INHIBIT)) {
+        uart_puts("[ERROR] EMMC is inhibit\n");
+    }
+
+    uart_puts("[DEBUG] Sending command ");
+    uart_hex(code);
+    uart_puts(" with arg ");
+    uart_hex(arg);
+    uart_puts("to EMMC\n");
+
+    *EMMC_INTERRUPT = *EMMC_INTERRUPT;
+    *EMMC_ARG1 = arg;
+    *EMMC_CMDTM = code;
+
+    if (code == CMD_SEND_OP_COND) {
+        wait_msec(1000);
+    } else if (code == CMD_SEND_IF_COND || code == CMD_APP_CMD) {
+        wait_msec(100);
+    }
+
+    if ((response = sd_wait_for_interrupt(INT_CMD_DONE))) {
+        uart_puts("[ERROR] Failed to send EMMC command\n");
+        sd_error = response;
+        return -1;
+    }
+
+    response = *EMMC_RESP0;
+    if (code == CMD_GO_IDLE || code == CMD_APP_CMD) {
+        return 0;
+    } else if (code == (CMD_APP_CMD | CMD_RSPNS_48)) {
+        return response & SR_APP_CMD;
+    } else if (code == CMD_SEND_OP_COND) {
+        return response;
+    } else if (code == CMD_SEND_IF_COND) {
+        return response == arg ? SD_OK : SD_ERROR;
+    } else if (code == CMD_ALL_SEND_CID) {
+        response |= *EMMC_RESP3;
+        response |= *EMMC_RESP2;
+        response |= *EMMC_RESP1;
+        return response;
+    } else if (code == CMD_SEND_REL_ADDR) {
+        sd_error = (((response & 0x1fff))|((response & 0x2000)<<6)|((response & 0x4000)<<8)|((response & 0x8000)<<8)) & CMD_ERRORS_MASK;
+        return response & CMD_RCA_MASK;
+    }
+
+    return response & CMD_ERRORS_MASK;
+}
+
+int sd_status(unsigned int mask) {
+    int counter = 500000;
+    while ((*EMMC_STATUS & mask) && !(*EMMC_INTERRUPT & INT_ERROR_MASK)) {
+        counter--;
+        wait_msec(1);
+    }
+
+    return (counter <= 0 || (*EMMC_INTERRUPT & INT_ERROR_MASK)) ? SD_ERROR : SD_OK;
+}
+
+int sd_wait_for_interrupt(unsigned int mask) {
+    unsigned int response, m = mask | INT_ERROR_MASK;
+    int counter = 100000;
+    while (!(*EMMC_INTERRUPT & m) && counter--) {
+        wait_msec(1);
+    }
+
+    response = *EMMC_INTERRUPT;
+    if (counter <= 0 || (response & INT_CMD_TIMEOUT) || (response & INT_DATA_TIMEOUT)) {
+        *EMMC_INTERRUPT = response;
+        return SD_ERROR;
+    } else if (response & INT_ERROR_MASK) {
+        *EMMC_INTERRUPT = mask;
+        return SD_ERROR;
+    }
+
+    *EMMC_INTERRUPT = mask;
+    return 0;
+}
+
+// TODO move from here to util
+void wait_msec(unsigned int n) {
+    uint32_t system_clock = *(volatile uint32_t*)SYS_TIMER_CLOCK;
+    uint32_t target = system_clock + n * 1000;
+
+    while ((int32_t)(*(volatile uint32_t*)SYS_TIMER_CLOCK - target) < 0);
 }
