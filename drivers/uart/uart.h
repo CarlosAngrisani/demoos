@@ -36,4 +36,6 @@ void uart_puts(const char* str);
 
 void uart_hex(unsigned long num);
 
+void handle_uart_irq(void);
+
 #endif
