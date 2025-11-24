@@ -80,11 +80,15 @@ Dopo questo, il kernel va in loop; la CPU è stata istruita dal kernel su come g
 
 ### Interrupt
 
-Cosa succede quando viene generato un interrupt? Supponiamo di aver inviato un carattere sulla UART
-- La UART genera un interrupt
-- La CPU controlla l'indirizzo in cui si trova la tabella degli interrupt (è stato scritto durante l'inizializzazione)
-- La CPU, in base al livello di eccezione, salta a una procedura assembly; nel nostro caso salta a `irq_el1`
-- Questa procedura passa in modalità kernel e invoca `handle_irq`
-- La funzione `handle_irq` è scritta in c e controlla quale dispositivo ha generato l'interrupt
-- Chiama una funzione diversa per gestire ogni dispositivo
-- Nel nostro esempio, chiama la funzione `handle_uart_irq` che stampa a schermo il carattere scritto
+Cosa succede quando viene generato un interrupt? Supponiamo di aver inviato un **carattere** sulla UART
+- La **UART** alza la linea di interrupt corrispondente (**IRQ #57**, vedi BCM2835-ARM-Peripherals, pag.113)
+- Il **controller degli interruput** rileva il segnale e lo marca come "pending" nel registro `IRQ_PENDING_2` (e' il registro che si occupa dei IRQ #32-#63)
+- La **CPU** interrompe il flusso normale di esecuzione e consulta trova la tabella degli interrupt (il cui indirizzo e' stato memorizzato nel registro `VBAR_EL1` durante l'iniziazlizzione)
+- In base al tipo di evento e al livello di eccezione, salta a una routine precisa; nel nostro caso salta a `el1_irq`
+- Questa routine eseugue la macro `kernel_entry` che salva tutti i registri sullo stack per preservare lo stato del programma interrotto.
+- Successivamente viene chiamata la funzione `handle_irq`.
+- Questa funzione legge i registri `IRQ_PENDING_1` e `IRQ_PENDING_2` e controlla quale dispositivo ha generato l'interrupt.
+- Vedendo che il bit attivo e' presente in `IRQ_PENDING_2` con valore **IRQ #57**, riconosce che l’interrupt è stato generato dalla **UART**
+- A questo punt, la funzione `handle_irq` chiama `handle_uart_irq` che si occupera' di gestire l'interrupt/
+- Una volta gestito l'evento, il flusso torna `el1_irq` che terminera' eseguendo la macro `kernel_exit`, macro che riprisinera' tutti i registri salvati.
+- Infine viene eseguita l'istruzione `eret` che segnalera' alla CPU la fine della gestione dell'interrupt.
