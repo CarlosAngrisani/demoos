@@ -1,20 +1,39 @@
 #include <stddef.h>
 #include <stdint.h>
-#include "../drivers/uart.h"
-#include "../drivers/framebuffer.h"
+#include "../libs/utils.h"
+#include "../drivers/uart/uart.h"
+#include "../drivers/framebuffer/framebuffer.h"
+#include "../drivers/timer/timer.h"
+#include "../drivers/irq/controller.h"
+#include "../drivers/sd/sd.h"
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
-  uart_init();
-  uart_puts("Hello, kernel world!\r\n");
+    // Inizializza UART
+    uart_init();
+    uart_puts("Hello, kernel world!\r\n");
 
-  int ok = framebuffer_init();
-  if (ok) {
-    framebuffer_print(0, 0, "Hello, framebuffer world!\n");
-  } else {
-    uart_puts("Initialization of framebuffer failed.\r\n");
-  }
-  
-  while (1)
-    uart_putc(uart_getc());
+	// Stampa EL
+    uart_puts("Exception level: ");
+    uart_putc('0' + get_el());
+    uart_puts("\n");
+
+    // Inizializza vettore IRQ e timer
+    irq_vector_init();
+    timer_init();
+    enable_interrupt_controller();
+    enable_irq();
+
+    // EMMC non funziona su qemu
+    int sd_ok = sd_init();
+    if (sd_ok == SD_OK) {
+        uart_puts("SD card initialized OK\n");
+    } else {
+        uart_puts("SD card initialization FAILED\n");
+    }
+
+    // Ora gli interrupt gestiscono RX/TX della UART e il timer.
+    // Non serve più loop su uart_getc().
+    while (1) {
+    }
 }

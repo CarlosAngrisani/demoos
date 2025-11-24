@@ -1,5 +1,5 @@
 #include "mbox.h"
-#include "mmio.h"
+#include "../../libs/mmio.h"
 
 #define MBOX_RESPONSE   0x80000000
 #define MBOX_FULL       0x80000000
