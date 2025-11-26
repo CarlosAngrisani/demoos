@@ -33,9 +33,9 @@ struct PCB {
 
 #define PROCESS_RUNNING 1
 
-#define INIT_TASK { \
-    { 0,0,0,0,0,0,0,0,0,0,0,0,0 }, \
-    0, 0, 1, 0 \
+#define INIT_PROCESS \
+    { {0,0,0,0,0,0,0,0,0,0,0,0,0}, \
+    0, 1, 1, 0 \
 }
 
 extern struct PCB* current_process;
@@ -44,7 +44,7 @@ extern int n_processes;
 
 extern void preempt_enable();
 extern void preempt_disable();
-extern void _schedule();
+extern void schedule();
 extern void switch_to_process(struct PCB*);
 extern void handle_timer_tick();
 
