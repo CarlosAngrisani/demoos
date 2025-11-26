@@ -35,7 +35,8 @@
 	mrs	x22, elr_el1
 	mrs	x23, spsr_el1
 
-	str	x30, [sp, #16 * 15]
+	stp	x30, x22, [sp, #16 * 15]
+	str x23, [sp, #16 * 16]
 	.endm
 
 	.macro	kernel_exit
