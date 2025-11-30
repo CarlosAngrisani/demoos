@@ -9,7 +9,7 @@
 #include "../drivers/irq/controller.h"
 #include "../drivers/sd/sd.h"
 
-void kernel_process(int);
+void kernel_process();
 void user_process();
 void user_process1(char*);
 
@@ -17,10 +17,6 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
     uart_init();
     uart_puts("Hello, kernel world!\r\n");
-
-    uart_puts("Exception level: ");
-    uart_putc('0' + get_el());
-    uart_puts("\n");
 
     irq_vector_init();
     timer_init();
@@ -34,8 +30,9 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
     }
 }
 
-void kernel_process(int a) {
-    uart_puts("Kernel process started");
+void kernel_process() {
+    uart_puts("Kernel process started\n");
+
     int error = move_to_user_mode((unsigned long)&user_process);
     if (error < 0) {
         uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
@@ -43,7 +40,6 @@ void kernel_process(int a) {
 }
 
 void user_process() {
-    char buffer[30] = {0};
     call_syscall_write("User process started\n");
 
     unsigned long stack = call_syscall_malloc();
@@ -51,24 +47,29 @@ void user_process() {
         uart_puts("[ERROR] Cannot allocate stack for process 1\n\r");
         return;
     }
+    call_syscall_write("[DEBUG] Allocated stack for process 1\n");
+
 
     int error = call_syscall_clone((unsigned long)&user_process1, (unsigned long)"12345", stack);
     if (error < 0) {
         uart_puts("[ERROR] Cannot clone process 1\n\r");
         return;
     }
+    call_syscall_write("[DEBUG] Cloned process 1\n");
 
     stack = call_syscall_malloc();
     if (stack < 0) {
         uart_puts("[ERROR] Cannot allocate stack for process 2\n\r");
         return;
     }
+    call_syscall_write("[DEBUG] Allocated stack for process 2\n");
 
-    error = call_syscall_clone((unsigned long)&user_process1, (unsigned long)"abcde", stack);
+    error = call_syscall_clone((unsigned long)&user_process1, (unsigned long)"abcd", stack);
     if (error < 0) {
         uart_puts("[ERROR] Cannot clone process 2");
         return;
     }
+    call_syscall_write("[DEBUG] Cloned process 2\n");
 
     call_syscall_exit();
 }

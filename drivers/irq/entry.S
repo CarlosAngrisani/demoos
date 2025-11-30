@@ -74,7 +74,6 @@
 	ldp	x24, x25, [sp, #16 * 12]
 	ldp	x26, x27, [sp, #16 * 13]
 	ldp	x28, x29, [sp, #16 * 14]
-	ldr	x30, [sp, #16 * 15]
 	add	sp, sp, #S_FRAME_SIZE
 	eret
 	.endm

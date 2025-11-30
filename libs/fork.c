@@ -16,8 +16,8 @@ int fork(unsigned long clone_flags, unsigned long function, unsigned long argume
         return 1;
     }
 
-    struct pt_regs* child_registes = task_pt_regs(new_process);
-    memzero((unsigned long)child_registes, sizeof(struct pt_regs));
+    struct pt_regs* child_registers = task_pt_regs(new_process);
+    memzero((unsigned long)child_registers, sizeof(struct pt_regs));
     memzero((unsigned long)&new_process->cpu_context, sizeof(struct cpu_context));
 
     if (clone_flags & PF_KTHREAD) {
@@ -27,14 +27,15 @@ int fork(unsigned long clone_flags, unsigned long function, unsigned long argume
     } else {
         // If we are running a user thread, I need to allocate a new stack
         struct pt_regs* current_registers = task_pt_regs(current_process);
-        *child_registes = *current_registers;
-        child_registes->registers[0] = 0;
-        child_registes->sp = stack + PAGE_SIZE;
+        *child_registers = *current_registers;
+        child_registers->registers[0] = 0;
+        child_registers->sp = stack + PAGE_SIZE;
         new_process->stack = stack;
     }
 
     int process_id = n_processes++;
 
+    new_process->flags = clone_flags;
     new_process->priority = current_process->priority;
     new_process->state = PROCESS_RUNNING;
     new_process->counter = current_process->priority;
@@ -42,21 +43,14 @@ int fork(unsigned long clone_flags, unsigned long function, unsigned long argume
     new_process->pid = process_id;
 
     // x19 and x20 will be used in the assembly to call the function
-    new_process->cpu_context.x19 = function;
-    new_process->cpu_context.x20 = argument;
     new_process->cpu_context.pc = (unsigned long) ret_from_fork;
-    new_process->cpu_context.sp = (unsigned long) new_process + PROCESS_SIZE;
+    new_process->cpu_context.sp = (unsigned long) child_registers;
 
     processes[process_id] = new_process;
 
     preempt_enable();
 
-    return 0;
-}
-
-struct pt_regs* task_pt_regs(struct PCB* process) {
-    unsigned long p = (unsigned long)process + THREAD_SIZE - sizeof(struct pt_regs);
-    return (struct pt_regs*)p;
+    return process_id;
 }
 
 int move_to_user_mode(unsigned long pc) {
@@ -80,4 +74,9 @@ int move_to_user_mode(unsigned long pc) {
     current_process->stack = stack;
 
     return 0;
+}
+
+struct pt_regs* task_pt_regs(struct PCB* process) {
+    unsigned long p = (unsigned long)process + THREAD_SIZE - sizeof(struct pt_regs);
+    return (struct pt_regs*)p;
 }

@@ -10,6 +10,9 @@ call_syscall_write:
 
 .globl call_syscall_clone
 call_syscall_clone:
+    mov x0, #69
+    bl uart_hex
+
     // First I save the arguments for the child process
     // because the handler called later overwrites them
     mov x10, x0     // Function
@@ -20,7 +23,6 @@ call_syscall_clone:
     mov x0, x2
     mov x8, #SYSCALL_CLONE_NUMBER
     svc 0x0
-
     cmp x0, #0
     // If the syscall return 0, we are inside the new thread and we need to 
     // start it
