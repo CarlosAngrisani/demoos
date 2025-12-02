@@ -24,4 +24,4 @@ void syscall_exit() {
     exit_process();
 }
 
-void* const sys_call_table = {syscall_write, syscall_malloc, syscall_clone, syscall_exit};
+void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit};

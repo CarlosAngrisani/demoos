@@ -10,9 +10,6 @@ call_syscall_write:
 
 .globl call_syscall_clone
 call_syscall_clone:
-    mov x0, #69
-    bl uart_hex
-
     // First I save the arguments for the child process
     // because the handler called later overwrites them
     mov x10, x0     // Function
@@ -21,7 +18,7 @@ call_syscall_clone:
 
     // I call the syscall handler for the clone
     mov x0, x2
-    mov x8, #SYSCALL_CLONE_NUMBER
+    mov w8, #SYSCALL_CLONE_NUMBER
     svc 0x0
     cmp x0, #0
     // If the syscall return 0, we are inside the new thread and we need to 
@@ -34,7 +31,7 @@ thread_start:
     mov x0, x11
     blr x10
 
-    mov x8, #SYSCALL_EXIT_NUMBER
+    mov w8, #SYSCALL_EXIT_NUMBER
     svc 0x0
 
 .globl call_syscall_malloc

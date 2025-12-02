@@ -185,6 +185,7 @@ stbl	.req	x27
 el0_svc:
 	// First I load the systemcalls table and systemcall number
 	adr		stbl, sys_call_table
+
 	uxtw	scno, w8
 	mov 	sc_nr, #__NR_SYSCALLS
 	// I enable interrupts
