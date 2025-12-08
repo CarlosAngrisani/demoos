@@ -8,6 +8,7 @@
 #include "../drivers/timer/timer.h"
 #include "../drivers/irq/controller.h"
 #include "../drivers/sd/sd.h"
+#include "../drivers/sd/sd_filesystem.h"
 
 void kernel_process();
 void user_process();
@@ -23,24 +24,31 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
     enable_interrupt_controller();
     enable_irq();
 
-    // int res = fork(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
-
-    int sd_result = sd_init();
-    if (sd_result == SD_OK) {
-        uart_puts("[DEBUG] SD init successful\n");
-    } else {
-        uart_puts("[DEBUG] SD init error\n");
-    }
+    int res = fork(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
 }
 
 void kernel_process() {
-    uart_puts("Kernel process started\n");
+    uart_puts("Kernel process started.\n");
 
-    int error = move_to_user_mode((unsigned long)&user_process);
-    if (error < 0) {
-        uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
+    int sd_result = sd_init();
+    if (sd_result == SD_OK) {
+        uart_puts("[DEBUG] SD init successful.\n");
+    } else {
+        uart_puts("[DEBUG] SD init error.\n");
+        exit_process();
     }
 
+    int fs_ok = sd_filesystem_init();
+    if (fs_ok == SD_FILESYSTEM_INIT_OK) {
+        uart_puts("[DEBUG] SD filesystem init successful.\n");
+    } else {
+        uart_puts("[DEBUG] SD filesystem init error.\n");
+    }
+
+    // int error = move_to_user_mode((unsigned long)&user_process);
+    // if (error < 0) {
+    //     uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
+    // }
 }
 
 void process(int a) {
