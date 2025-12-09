@@ -21,6 +21,46 @@ sudo ln -s $(which aarch64-linux-gnu-ld) /usr/local/bin/aarch64-elf-ld
 sudo apt-get install qemu-system-arm
 ```
 
+Inoltre, per usare il filesystem è necessario creare un disco virtuale usando i seguenti comandi. 
+``` bash
+dd if=/dev/zero of=disk.img bs=1M count=64
+
+parted disk.img --script mklabel msdos
+
+parted disk.img --script mkpart primary fat32 1MiB 100%
+
+sudo losetup -fP disk.img
+
+lsblk # cerca il device in cui è stato montato il disco
+
+sudo mkfs.fat -F 32 /dev/loopXp1
+
+sudo losetup -d /dev/loopX
+```
+
+Dopo aver lanciato fdisk, segui questo wizard per creare la struttura MBR necessaria al filesystem FAT32. 
+```
+Command (m for help): n
+Partition type
+   p   primary (0 primary, 0 extended, 4 free)
+   e   extended (container for logical partitions)
+Select (default p): p
+Partition number (1-4, default 1): 1
+First sector (2048-131071, default 2048): 
+Last sector, +/-sectors or +/-size{K,M,G,T,P} (2048-131071, default 131071): 
+
+Created a new partition 1 of type 'Linux' and of size 63 MiB.
+
+Command (m for help): t
+Selected partition 1
+Hex code or alias (type L to list all): c
+Changed type of partition 'Linux' to 'W95 FAT32 (LBA)'.
+
+Command (m for help): w
+The partition table has been altered.
+Syncing disks.
+```
+
 ## Compilazione ed Esecuzione
 
 ### Comandi principali

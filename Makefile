@@ -39,7 +39,7 @@ kernel8.elf: $(OBJS)
 	$(LD) -r -b binary -o $@ $<
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=test.dd,if=sd,format=raw -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio
 
 clean:
 	rm -f kernel8.elf kernel8.img $(OBJS)

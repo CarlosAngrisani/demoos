@@ -30,14 +30,6 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 void kernel_process() {
     uart_puts("Kernel process started.\n");
 
-    int sd_result = sd_init();
-    if (sd_result == SD_OK) {
-        uart_puts("[DEBUG] SD init successful.\n");
-    } else {
-        uart_puts("[DEBUG] SD init error.\n");
-        exit_process();
-    }
-
     int fs_ok = sd_filesystem_init();
     if (fs_ok == SD_FILESYSTEM_INIT_OK) {
         uart_puts("[DEBUG] SD filesystem init successful.\n");

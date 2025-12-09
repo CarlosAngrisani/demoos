@@ -128,6 +128,7 @@ void enable_card_detect();
 void enable_clock_and_command();
 void enable_data_pins();
 long reset_emmc();
+int enable_card();
 
 void wait_msec(unsigned int n) {
     uint32_t system_clock = *(volatile uint32_t*)SYS_TIMER_CLOCK;
@@ -176,7 +177,7 @@ int sd_execute_command(unsigned int code, unsigned int arg)
         code &= ~CMD_NEED_APP;
     }
     if(sd_status(SR_CMD_INHIBIT)) { uart_puts("ERROR: EMMC busy\n"); sd_err= SD_TIMEOUT;return 0;}
-    uart_puts("EMMC: Sending command ");uart_hex(code);uart_puts(" arg ");uart_hex(arg);uart_puts("\n");
+    // uart_puts("EMMC: Sending command ");uart_hex(code);uart_puts(" arg ");uart_hex(arg);uart_puts("\n");
     *EMMC_INTERRUPT=*EMMC_INTERRUPT; *EMMC_ARG1=arg; *EMMC_CMDTM=code;
     if(code==CMD_SEND_OP_COND) wait_msec(1000); else
     if(code==CMD_SEND_IF_COND || code==CMD_APP_CMD) wait_msec(100);
@@ -204,7 +205,7 @@ int sd_readblock(unsigned int lba, unsigned char *buffer, unsigned int num)
 {
     int r,c=0,d;
     if(num<1) num=1;
-    uart_puts("sd_readblock lba ");uart_hex(lba);uart_puts(" num ");uart_hex(num);uart_puts("\n");
+    // uart_puts("sd_readblock lba ");uart_hex(lba);uart_puts(" num ");uart_hex(num);uart_puts("\n");
     if(sd_status(SR_DAT_INHIBIT)) {sd_err=SD_TIMEOUT; return 0;}
     unsigned int *buf=(unsigned int *)buffer;
     if(sd_scr[0] & SCR_SUPP_CCS) {
@@ -349,41 +350,9 @@ int sd_init() {
         return sd_err;
     }
 
-    // TODO refactor enable card
-    cnt = 6; 
-    r = 0; 
-    while (!(r&ACMD41_CMD_COMPLETE) && cnt--) {
-        delay(400);
-        r=sd_execute_command(CMD_SEND_OP_COND,ACMD41_ARG_HC);
-        uart_puts("EMMC: CMD_SEND_OP_COND returned ");
-        if (r & ACMD41_CMD_COMPLETE) {
-            uart_puts("COMPLETE ");
-        }
-        if (r & ACMD41_VOLTAGE) {
-            uart_puts("VOLTAGE ");
-        }
-        if(r & ACMD41_CMD_CCS) {
-            uart_puts("CCS ");
-        }
-
-        uart_hex(r >> 32);
-        uart_hex(r);
-        uart_puts("\n");
-
-        if(sd_err != SD_TIMEOUT && sd_err != SD_OK) {
-            uart_puts("ERROR: EMMC ACMD41 returned error\n");
-            return sd_err;
-        }
-    }
-
-    if (!(r & ACMD41_CMD_COMPLETE) || !cnt ){
-        return SD_TIMEOUT;
-    }
-    if (!(r & ACMD41_VOLTAGE)) {
-        return SD_ERROR;
-    }
-    if(r & ACMD41_CMD_CCS) {
-        ccs=SCR_SUPP_CCS;
+    int enable_card_ok = enable_card(&ccs);
+    if (enable_card_ok != SD_OK) {
+        return enable_card_ok;
     }
 
     sd_execute_command(CMD_ALL_SEND_CID, 0);
@@ -524,4 +493,44 @@ long reset_emmc() {
     } while((*EMMC_CONTROL1 & C1_SRST_HC) && cnt--);
 
     return cnt;
+}
+
+int enable_card(int* ccs) {
+    long cnt = 6; 
+    long r = 0; 
+    while (!(r&ACMD41_CMD_COMPLETE) && cnt--) {
+        delay(400);
+        r=sd_execute_command(CMD_SEND_OP_COND,ACMD41_ARG_HC);
+        uart_puts("EMMC: CMD_SEND_OP_COND returned ");
+        if (r & ACMD41_CMD_COMPLETE) {
+            uart_puts("COMPLETE ");
+        }
+        if (r & ACMD41_VOLTAGE) {
+            uart_puts("VOLTAGE ");
+        }
+        if(r & ACMD41_CMD_CCS) {
+            uart_puts("CCS ");
+        }
+
+        uart_hex(r >> 32);
+        uart_hex(r);
+        uart_puts("\n");
+
+        if(sd_err != SD_TIMEOUT && sd_err != SD_OK) {
+            uart_puts("ERROR: EMMC ACMD41 returned error\n");
+            return sd_err;
+        }
+    }
+
+    if (!(r & ACMD41_CMD_COMPLETE) || !cnt ){
+        return SD_TIMEOUT;
+    }
+    if (!(r & ACMD41_VOLTAGE)) {
+        return SD_ERROR;
+    }
+    if (r & ACMD41_CMD_CCS) {
+        ccs=SCR_SUPP_CCS;
+    }
+
+    return SD_OK;
 }
