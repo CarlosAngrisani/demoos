@@ -3,6 +3,7 @@
 #include "../../libs/allocator.h"
 #include "../../libs/fat32/fat.h"
 #include "../../drivers/uart/uart.h"
+#include "../../libs/allocator.h"
 
 bool sd_read_adapter(uint8_t* buffer, uint32_t sector) {
     int res = sd_readblock(sector, buffer, 1);
@@ -39,6 +40,15 @@ int sd_filesystem_init() {
         return SD_FILESYSTEM_INIT_ERROR;
     } else {
         uart_puts("[DEBUG] Filesystem mounted.\n");
+    }
+
+    Dir dir;
+    int error = fat_dir_open(&dir, "/mnt");
+    if (error) {
+        uart_puts("[ERROR] Cannot open '/mnt' directory.\n");
+        return SD_FILESYSTEM_INIT_ERROR;
+    } else {
+        uart_puts("[DEBUG] Opened directory '/mnt'.\n");
     }
 
     return SD_FILESYSTEM_INIT_OK;
