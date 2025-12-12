@@ -24,18 +24,18 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
     enable_interrupt_controller();
     enable_irq();
 
-    int res = fork(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
-}
-
-void kernel_process() {
-    uart_puts("Kernel process started.\n");
-
     int fs_ok = sd_filesystem_init();
     if (fs_ok == SD_FILESYSTEM_INIT_OK) {
         uart_puts("[DEBUG] SD filesystem init successful.\n");
     } else {
         uart_puts("[DEBUG] SD filesystem init error.\n");
     }
+
+    int res = fork(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
+}
+
+void kernel_process() {
+    uart_puts("Kernel process started.\n");
 
     int error = move_to_user_mode((unsigned long)&user_process);
     if (error < 0) {
@@ -46,9 +46,11 @@ void kernel_process() {
 void user_process() {
     call_syscall_write("[DEBUG] User process started\n");
 
-    int err = call_syscall_create_dir("temp");
+    int err = call_syscall_create_dir("user_dir");
     if (err) {
-        call_syscall_write("[ERROR] Cannot create 'temp' dir.\n");
+        call_syscall_write("[ERROR] Cannot create 'user_dir'.\n");
+    } else {
+        call_syscall_write("[DEBUG] Dir 'user_dir' created.\n");
     }
 
     call_syscall_exit();

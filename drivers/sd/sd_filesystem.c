@@ -5,6 +5,8 @@
 #include "../../drivers/uart/uart.h"
 #include "../../libs/syscalls.h"
 
+static Fat fat;
+
 bool sd_read_adapter(uint8_t* buffer, uint32_t sector) {
     int res = sd_readblock(sector, buffer, 1);
     return res != 0;
@@ -24,7 +26,6 @@ int sd_filesystem_init() {
     }
 
     DiskOps disk_operations = {sd_read_adapter, sd_write_adapter};
-    Fat fat;
 
     int probe_error = fat_probe(&disk_operations, 0);
     if (!probe_error) {
