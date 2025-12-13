@@ -5,8 +5,6 @@
 #include "../../drivers/uart/uart.h"
 #include "../../libs/syscalls.h"
 
-static Fat fat;
-
 bool sd_read_adapter(uint8_t* buffer, uint32_t sector) {
     int res = sd_readblock(sector, buffer, 1);
     return res != 0;

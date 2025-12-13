@@ -1,5 +1,6 @@
 #include "syscalls.h"
 #include "../drivers/uart/uart.h"
+#include "../drivers/sd/sd_filesystem.h"
 #include "fork.h"
 #include "allocator.h"
 #include "./fat32/fat.h"
@@ -47,7 +48,6 @@ int syscall_open_dir(char* dir_relative_path) {
 
 // Opens a file in '/mnt/' and returns 0 if there are no errors
 int syscall_open_file(char* file_relative_path, uint8_t flags) {
-    File file;
     char* complete_path = "/mnt/";
     strcat(complete_path, file_relative_path);
 
@@ -57,8 +57,21 @@ int syscall_open_file(char* file_relative_path, uint8_t flags) {
 
 // Closes a file in '/mnt/' and returns 0 if there are no errors
 int syscall_close_file(char* file_relative_path) {
-    // FIXME missing implementation
-    return 1;
+    int error = fat_file_close(&file);
+    return error;
 }
 
-void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit, syscall_create_dir, syscall_open_dir, syscall_open_file, syscall_close_file};
+// Writes a file in '/mnt/' and returns 0 if there are no errors
+int syscall_write_file(char* file_relative_path, char* buffer, int len, int* bytes) {
+    int error = fat_file_write(&file, buffer, len, bytes);
+    return error;
+}
+
+// Reads a file in '/mnt/' and returns 0 if there are no errors
+int syscall_read_file(char* file_relative_path, char* buffer, int len, int* bytes) {
+    fat_file_seek(&file, 0, FAT_SEEK_START);
+    int error = fat_file_read(&file, buffer, len, bytes);
+    return error;
+}
+
+void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit, syscall_create_dir, syscall_open_dir, syscall_open_file, syscall_close_file, syscall_write_file, syscall_read_file};

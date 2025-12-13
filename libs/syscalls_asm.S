@@ -62,6 +62,18 @@ call_syscall_close_file:
     svc #0
     ret
 
+.globl call_syscall_write_file
+call_syscall_write_file:
+    mov w8, #SYSCALL_WRITE_FILE_NUMBER
+    svc #0
+    ret
+
+.globl call_syscall_read_file
+call_syscall_read_file:
+    mov w8, #SYSCALL_READ_FILE_NUMBER
+    svc #0
+    ret
+
 thread_start:
     mov x29, 0
     mov x0, x11
