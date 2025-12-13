@@ -30,3 +30,17 @@ char* strcat(char* dest, const char* src) {
 
     return dest;
 }
+
+// Copies in the first string the content of the second one
+char* strcpy(char* dest, const char* src) {
+    char* dest_start = dest;
+    char* pointer = src;
+    while (*pointer != '\0') {
+        *dest = *pointer;
+        pointer++;
+        dest++;
+    }
+    *dest = '\0';
+
+    return dest_start;
+}

@@ -28,8 +28,8 @@ void syscall_exit() {
 
 // Creates a dir in '/mnt/' and returns 0 if there are no errors
 int syscall_create_dir(char* dir_relative_path) {
-    Dir dir;
-    char* complete_path = "/mnt/";
+    char complete_path[128];
+    strcpy(complete_path, "/mnt/\0");
     strcat(complete_path, dir_relative_path);
 
     int error = fat_dir_create(&dir, complete_path);
@@ -38,8 +38,8 @@ int syscall_create_dir(char* dir_relative_path) {
 
 // Opens a dir in '/mnt/' and returns 0 if there are no errors
 int syscall_open_dir(char* dir_relative_path) {
-    Dir dir;
-    char* complete_path = "/mnt/";
+    char complete_path[128];
+    strcpy(complete_path, "/mnt/\0");
     strcat(complete_path, dir_relative_path);
 
     int error = fat_dir_open(&dir, complete_path);
@@ -48,7 +48,8 @@ int syscall_open_dir(char* dir_relative_path) {
 
 // Opens a file in '/mnt/' and returns 0 if there are no errors
 int syscall_open_file(char* file_relative_path, uint8_t flags) {
-    char* complete_path = "/mnt/";
+    char complete_path[128];
+    strcpy(complete_path, "/mnt/\0");
     strcat(complete_path, file_relative_path);
 
     int error = fat_file_open(&file, complete_path, flags);

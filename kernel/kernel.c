@@ -56,21 +56,21 @@ void user_process() {
         call_syscall_write("[DEBUG] Dir 'user_dir' created.\n");
     }
 
-    err = call_syscall_open_file("user_file.txt", FAT_CREATE | FAT_WRITE | FAT_READ | FAT_TRUNC);
+    err = call_syscall_open_file("user_dir/user_file.txt", FAT_CREATE | FAT_WRITE | FAT_READ | FAT_TRUNC);
     if (err) {
         call_syscall_write("[ERROR] Cannot open 'user_file.txt'.\n");
     } else {
         call_syscall_write("[DEBUG] Open 'user_file.txt'.\n");
     }
 
-    err = call_syscall_write_file("user_file.txt", "ciao", 5, cnt);
+    err = call_syscall_write_file("user_dir/user_file.txt", "ciao12345678", 13, cnt);
     if (err) {
         call_syscall_write("[ERROR] Cannot write 'user_file.txt'.\n");
     } else {
         call_syscall_write("[DEBUG] Written 'user_file.txt'.\n");
     }
 
-    err = call_syscall_read_file("user_file.txt", buffer, 5, cnt);
+    err = call_syscall_read_file("user_dir/user_file.txt", buffer, 13, cnt);
     if (err) {
         call_syscall_write("[ERROR] Cannot read 'user_file.txt'.\n");
     } else {
@@ -79,7 +79,7 @@ void user_process() {
         call_syscall_write("'\n");
     }
 
-    err = call_syscall_close_file("user_file.txt");
+    err = call_syscall_close_file("user_dir/user_file.txt");
     if (err) {
         call_syscall_write("[ERROR] Cannot write 'user_file.txt'.\n");
     } else {
