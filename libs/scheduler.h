@@ -47,6 +47,7 @@ struct PCB {
 
 #define PROCESS_RUNNING 1
 #define PROCESS_ZOMBIE 2
+#define PROCESS_WAITING_UART_INPUT 3
 
 #define INIT_PROCESS \
     { {0,0,0,0,0,0,0,0,0,0,0,0,0}, \

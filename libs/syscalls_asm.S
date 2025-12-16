@@ -80,6 +80,12 @@ call_syscall_yield:
     svc #0
     ret
 
+.globl call_syscall_input
+call_syscall_input:
+    mov w8, #SYSCALL_INPUT_NUMBER
+    svc #0
+    ret
+
 thread_start:
     mov x29, 0
     mov x0, x11

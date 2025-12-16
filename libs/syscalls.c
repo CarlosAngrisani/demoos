@@ -5,6 +5,7 @@
 #include "allocator.h"
 #include "./fat32/fat.h"
 #include "utils.h"
+#include "../drivers/irq/controller.h"
 
 void syscall_write(char* buffer) {
     uart_puts(buffer);
@@ -91,4 +92,32 @@ void syscall_yield() {
     schedule();
 }
 
-void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit, syscall_create_dir, syscall_open_dir, syscall_open_file, syscall_close_file, syscall_write_file, syscall_read_file, syscall_yield};
+int syscall_input(char* buffer, int len) {
+    int current_len = 0;
+
+    while (1) {
+        if (uart_buffer[0] == 0) {
+            uart_puts("[DEBUG] Buffer vuoto\n");
+            current_process->state = PROCESS_WAITING_UART_INPUT;
+            schedule();
+        }
+
+        while (uart_buffer[uart_tail] != 0) {
+            char c;
+            c = uart_buffer[uart_tail];
+            uart_tail = (uart_tail + 1) % UART_BUFFER_SIZE;
+            
+            if (c == '\r' || c == '\n') {
+                return current_len;
+            }
+            
+            if (current_len < len) {
+                *buffer = c;
+                buffer++;
+                current_len++;
+            }
+        }
+    }
+}
+
+void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit, syscall_create_dir, syscall_open_dir, syscall_open_file, syscall_close_file, syscall_write_file, syscall_read_file, syscall_yield, syscall_input};

@@ -26,6 +26,12 @@ enum {
   UART0_TDR    = (UART0_BASE + 0x8C)
 };
 
+#define UART_BUFFER_SIZE 64
+
+extern char uart_buffer[UART_BUFFER_SIZE];
+extern int uart_head; // The index in which the IRQ will write the next char
+extern int uart_tail; // The index in which the syscall will read the char
+
 void uart_init();
 
 void uart_putc(unsigned char c);

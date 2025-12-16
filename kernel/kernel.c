@@ -10,6 +10,7 @@
 #include "../drivers/sd/sd.h"
 #include "../drivers/sd/sd_filesystem.h"
 
+
 void kernel_process();
 void user_process();
 void user_process_fs();
@@ -53,11 +54,13 @@ void user_process() {
     }
     call_syscall_clone(&user_process_print, "1", stack_1);
 
+    /*
     unsigned long stack_2 = call_syscall_malloc();
     if (stack_1 < 0) {
         call_syscall_write("[ERROR] Cannot allocate stack for process 1.\n");
     }
     call_syscall_clone(&user_process_print, "2", stack_2);
+    */
 
     call_syscall_exit();
 }
@@ -94,9 +97,8 @@ void user_process_fs() {
 
 void user_process_print(char* process_name) {
     while (1) {
-        call_syscall_write("Processo ");
-        call_syscall_write(process_name);
-        call_syscall_write("\n");
-        call_syscall_yield();
+        char buffer[8];
+        call_syscall_input(buffer, 8);
+        uart_puts("[P"); uart_puts(process_name); uart_puts("] Ciao '"); uart_puts(buffer); uart_puts("'\n");
     }
 }
