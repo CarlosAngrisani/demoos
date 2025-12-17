@@ -86,6 +86,12 @@ call_syscall_input:
     svc #0
     ret
 
+.globl call_syscall_get_next_entry
+call_syscall_get_next_entry:
+    mov w8, #SYSCALL_GET_NEXT_ENTRY_NUMBER
+    svc #0
+    ret
+
 thread_start:
     mov x29, 0
     mov x0, x11

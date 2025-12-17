@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 #include "../libs/scheduler.h"
 #include "../libs/fork.h"
 #include "../libs/utils.h"
@@ -15,6 +16,7 @@ void kernel_process();
 void user_process();
 void user_process_fs();
 void user_process_print(char* process_name);
+void shell();
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
@@ -39,9 +41,57 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 void kernel_process() {
     uart_puts("Kernel process started.\n");
 
-    int error = move_to_user_mode((unsigned long)&user_process);
+    int error = move_to_user_mode((unsigned long)&shell);
     if (error < 0) {
         uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
+    }
+}
+
+void shell() {
+    char current_path[40] = "/\0";
+    call_syscall_write("[SHELL] Welcome to the shell!\n");
+    while (1) {
+        call_syscall_write("> ");
+        char buffer[64] = {0};
+        call_syscall_input(buffer, 64);
+        call_syscall_write("\n");
+
+        if (memcmp(buffer, "help", 4) == 0) {
+            call_syscall_write("[demoos shell - 0.0.1]\n");
+        } else if (memcmp(buffer, "ls", 2) == 0) {
+            int fd = syscall_open_dir(current_path);
+            if (fd == -1) {
+                call_syscall_write("[SHELL] Error opening folder '");
+                call_syscall_write(buffer);
+                call_syscall_write("'.\n");
+            }
+            call_syscall_write("[SHELL] Folder open with FD '");
+            uart_hex(fd);
+            call_syscall_write("'.\n");
+
+            FatEntryInfo* info;
+            while (1) {
+                int result = call_syscall_get_next_entry(fd, info);
+                if (result != 1) {
+                    break;
+                }
+
+                if (info->is_dir) {
+                    call_syscall_write("[Directory] ");
+                } else {
+                    call_syscall_write("[File]      ");
+                }
+                call_syscall_write(info->name);
+                call_syscall_write("\n");
+            }
+        } else if (memcmp(buffer, "pwd", 3) == 0) {
+            call_syscall_write(current_path);
+            call_syscall_write("\n");
+        } else {
+            call_syscall_write("[SHELL] Command '");
+            call_syscall_write(buffer);
+            call_syscall_write("' not found.\n");
+        }
     }
 }
 
