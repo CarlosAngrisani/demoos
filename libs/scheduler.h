@@ -11,7 +11,7 @@
 
 #define MAX_FILES_PER_PROCESS 16
 
-#define PF_KTHREAD 0x00000002	
+#define PF_KTHREAD 0x00000002
 
 struct cpu_context {
     unsigned long x19;

@@ -58,7 +58,7 @@ int syscall_open_file(char* file_relative_path, uint8_t flags) {
         }
     }
 
-    File* file = (struct File*) get_free_page();
+    File* file = (File*) get_free_page();
     int error = fat_file_open(file, complete_path, flags);
 
     if (error) {
@@ -92,12 +92,19 @@ void syscall_yield() {
     schedule();
 }
 
+struct PCB* uart_owner = NULL;
+
 int syscall_input(char* buffer, int len) {
     int current_len = 0;
 
+    while (uart_owner != NULL && uart_owner != current_process) {
+        schedule();
+    }
+
+    uart_owner = current_process;
+
     while (1) {
         if (uart_buffer[0] == 0) {
-            uart_puts("[DEBUG] Buffer vuoto\n");
             current_process->state = PROCESS_WAITING_UART_INPUT;
             schedule();
         }
@@ -106,11 +113,12 @@ int syscall_input(char* buffer, int len) {
             char c;
             c = uart_buffer[uart_tail];
             uart_tail = (uart_tail + 1) % UART_BUFFER_SIZE;
-            
+
             if (c == '\r' || c == '\n') {
+                uart_owner = NULL;
                 return current_len;
             }
-            
+
             if (current_len < len) {
                 *buffer = c;
                 buffer++;

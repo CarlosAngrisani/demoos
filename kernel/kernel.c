@@ -14,7 +14,7 @@
 void kernel_process();
 void user_process();
 void user_process_fs();
-void user_process_print();
+void user_process_print(char* process_name);
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
@@ -52,15 +52,13 @@ void user_process() {
     if (stack_1 < 0) {
         call_syscall_write("[ERROR] Cannot allocate stack for process 1.\n");
     }
-    call_syscall_clone(&user_process_print, "1", stack_1);
+    call_syscall_clone((unsigned long)&user_process_print, (unsigned long)"1", stack_1);
 
-    /*
     unsigned long stack_2 = call_syscall_malloc();
     if (stack_1 < 0) {
         call_syscall_write("[ERROR] Cannot allocate stack for process 1.\n");
     }
-    call_syscall_clone(&user_process_print, "2", stack_2);
-    */
+    call_syscall_clone((unsigned long)&user_process_print, (unsigned long)"2", stack_2);
 
     call_syscall_exit();
 }
@@ -97,8 +95,9 @@ void user_process_fs() {
 
 void user_process_print(char* process_name) {
     while (1) {
-        char buffer[8];
+        char buffer[8] = {0};
         call_syscall_input(buffer, 8);
-        uart_puts("[P"); uart_puts(process_name); uart_puts("] Ciao '"); uart_puts(buffer); uart_puts("'\n");
+        uart_puts("[P"); uart_puts(process_name); uart_puts("] Hello '"); uart_puts(buffer); uart_puts("'\n");
+        call_syscall_yield();
     }
 }
