@@ -62,7 +62,7 @@ int move_to_user_mode(unsigned long pc) {
     // this pointer in the elr_el1 register to return after exception handling
     regs->pc = pc;
 
-    // This state will be copied into spsr_el1 by kernel_exit and becomes the 
+    // This state will be copied into spsr_el1 by kernel_exit and becomes the
     // processor state after exception handling
     regs->pstate = PSR_MODE_EL0t;
 

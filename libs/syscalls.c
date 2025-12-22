@@ -4,6 +4,7 @@
 #include "fork.h"
 #include "allocator.h"
 #include "./fat32/fat.h"
+#include "scheduler.h"
 #include "utils.h"
 #include "../drivers/irq/controller.h"
 
@@ -32,8 +33,24 @@ int syscall_create_dir(char* dir_relative_path) {
     strcpy(complete_path, "/mnt/\0");
     strcat(complete_path, dir_relative_path);
 
-    int error = fat_dir_create(&dir, complete_path);
-    return error;
+    int file_descriptor = -1;
+    for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
+        if (current_process->files[i] == NULL) {
+            file_descriptor = i;
+            break;
+        }
+    }
+
+    Dir* dir = (Dir*) get_free_page();
+    int error = fat_dir_create(dir, complete_path);
+    if (error) {
+        return -1;
+    }
+
+    current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FOLDER;
+    current_process->files[file_descriptor]->d = dir;
+
+    return file_descriptor;
 }
 
 int syscall_open_dir(char* dir_relative_path) {
@@ -41,8 +58,25 @@ int syscall_open_dir(char* dir_relative_path) {
     strcpy(complete_path, "/mnt/\0");
     strcat(complete_path, dir_relative_path);
 
-    int error = fat_dir_open(&dir, complete_path);
-    return error;
+    int file_descriptor = -1;
+    for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
+        if (current_process->files[i] == NULL) {
+            file_descriptor = i;
+            break;
+        }
+    }
+
+    Dir* dir = (Dir*) get_free_page();
+    int error = fat_dir_open(dir, complete_path);
+    if (error) {
+        return -1;
+    }
+
+    current_process->files[file_descriptor] = (FatResource*) get_free_page();
+    current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FOLDER;
+    current_process->files[file_descriptor]->d = dir;
+
+    return file_descriptor;
 }
 
 int syscall_open_file(char* file_relative_path, uint8_t flags) {
@@ -65,24 +99,28 @@ int syscall_open_file(char* file_relative_path, uint8_t flags) {
         return -1;
     }
 
-    current_process->files[file_descriptor] = file;
+    current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FILE;
+    current_process->files[file_descriptor]->f = file;
     return file_descriptor;
 }
 
 int syscall_close_file(int file_descriptor) {
-    File* file = current_process->files[file_descriptor];
+    FatResource* fat_resource = current_process->files[file_descriptor];
+    File* file = fat_resource->f;
     int error = fat_file_close(file);
     return error;
 }
 
 int syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes) {
-    File* file = current_process->files[file_descriptor];
+    FatResource* fat_resource = current_process->files[file_descriptor];
+    File* file = fat_resource->f;
     int error = fat_file_write(file, buffer, len, bytes);
     return error;
 }
 
 int syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes) {
-    File* file = current_process->files[file_descriptor];
+    FatResource* fat_resource = current_process->files[file_descriptor];
+    File* file = fat_resource->f;
     fat_file_seek(file, 0, FAT_SEEK_START);
     int error = fat_file_read(file, buffer, len, bytes);
     return error;
@@ -112,6 +150,8 @@ int syscall_input(char* buffer, int len) {
         while (uart_buffer[uart_tail] != 0) {
             char c;
             c = uart_buffer[uart_tail];
+            uart_putc(c);
+
             uart_tail = (uart_tail + 1) % UART_BUFFER_SIZE;
 
             if (c == '\r' || c == '\n') {
@@ -128,4 +168,29 @@ int syscall_input(char* buffer, int len) {
     }
 }
 
-void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit, syscall_create_dir, syscall_open_dir, syscall_open_file, syscall_close_file, syscall_write_file, syscall_read_file, syscall_yield, syscall_input};
+int syscall_get_next_entry(int file_descriptor, FatEntryInfo *entry_info) {
+    FatResource* fat_resource = current_process->files[file_descriptor];
+    Dir* dir = fat_resource->d;
+
+    DirInfo dir_info;
+    int error = fat_dir_read(dir, &dir_info);
+
+    if (error) {
+        return -1;
+    }
+
+    int size = dir_info.name_len < 255? dir_info.name_len : 255;
+    for (int i = 0; i < size; i++) {
+        entry_info->name[i] = dir_info.name[i];
+    }
+    entry_info->is_dir = (dir_info.attr & FAT_ATTR_DIR) ? 1 : 0;
+
+    error = fat_dir_next(dir);
+    if (error) {
+        return -1;
+    }
+
+    return 1;
+}
+
+void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit, syscall_create_dir, syscall_open_dir, syscall_open_file, syscall_close_file, syscall_write_file, syscall_read_file, syscall_yield, syscall_input, syscall_get_next_entry};

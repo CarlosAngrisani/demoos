@@ -31,6 +31,16 @@ struct cpu_context {
 
 #include "./fat32/fat.h"
 
+typedef enum { RESOURCE_TYPE_FILE, RESOURCE_TYPE_FOLDER } ResourceType;
+
+typedef struct {
+    ResourceType resource_type;
+
+    union {
+        File* f; Dir* d;
+    };
+} FatResource;
+
 struct PCB {
     struct cpu_context cpu_context;
     long state;
@@ -42,7 +52,7 @@ struct PCB {
     unsigned long stack;
     unsigned long flags;
 
-    File* files[16];
+    FatResource* files[16];
 };
 
 #define PROCESS_RUNNING 1
