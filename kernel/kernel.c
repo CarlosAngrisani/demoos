@@ -93,6 +93,13 @@ void shell() {
             char command[30];
             char dir_name[30];
             strsplit(buffer, ' ', command, dir_name);
+
+            int fd = syscall_create_dir(dir_name);
+            if (fd == -1) {
+                call_syscall_write("[SHELL] Cannot create '");
+                call_syscall_write(dir_name);
+                call_syscall_write("'.\n");
+            }
         } else {
             call_syscall_write("[SHELL] Command '");
             call_syscall_write(buffer);
