@@ -3,7 +3,7 @@
 
 enum {
   // The base address for UART0.
-  UART0_BASE = 0x201000,
+  UART0_BASE   = 0x201000,
 
   // The offsets for reach register for the UART.
   UART0_DR     = (UART0_BASE + 0x00),

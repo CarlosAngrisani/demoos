@@ -14,19 +14,19 @@
 #define PF_KTHREAD 0x00000002
 
 struct cpu_context {
-    unsigned long x19;
-    unsigned long x20;
-    unsigned long x21;
-    unsigned long x22;
-    unsigned long x23;
-    unsigned long x24;
-    unsigned long x25;
-    unsigned long x26;
-    unsigned long x27;
-    unsigned long x28;
-    unsigned long fp;
-    unsigned long sp;
-    unsigned long pc;
+  unsigned long x19;
+  unsigned long x20;
+  unsigned long x21;
+  unsigned long x22;
+  unsigned long x23;
+  unsigned long x24;
+  unsigned long x25;
+  unsigned long x26;
+  unsigned long x27;
+  unsigned long x28;
+  unsigned long fp;
+  unsigned long sp;
+  unsigned long pc;
 };
 
 #include "./fat32/fat.h"
@@ -34,44 +34,42 @@ struct cpu_context {
 typedef enum { RESOURCE_TYPE_FILE, RESOURCE_TYPE_FOLDER } ResourceType;
 
 typedef struct {
-    ResourceType resource_type;
+  ResourceType resource_type;
 
-    union {
-        File* f; Dir* d;
-    };
+  union {
+    File *f;
+    Dir *d;
+  };
 } FatResource;
 
 struct PCB {
-    struct cpu_context cpu_context;
-    long state;
-    long counter;
-    long priority;
-    int preempt_disabled;
-    long pid;
+  struct cpu_context cpu_context;
+  long state;
+  long counter;
+  long priority;
+  int preempt_disabled;
+  long pid;
 
-    unsigned long stack;
-    unsigned long flags;
+  unsigned long stack;
+  unsigned long flags;
 
-    FatResource* files[16];
+  FatResource *files[16];
 };
 
 #define PROCESS_RUNNING 1
 #define PROCESS_ZOMBIE 2
 #define PROCESS_WAITING_UART_INPUT 3
 
-#define INIT_PROCESS \
-    { {0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-    0, 1, 1, 0, 0 \
-}
+#define INIT_PROCESS {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 1, 0, 0}
 
-extern struct PCB* current_process;
-extern struct PCB* processes[N_PROCESSES];
+extern struct PCB *current_process;
+extern struct PCB *processes[N_PROCESSES];
 extern int n_processes;
 
 extern void preempt_enable();
 extern void preempt_disable();
 extern void schedule();
-extern void switch_to_process(struct PCB*);
+extern void switch_to_process(struct PCB *);
 extern void handle_timer_tick();
 extern void exit_process();
 
